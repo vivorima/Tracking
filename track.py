@@ -47,15 +47,15 @@ def readVideo(video, ground, stop):
             ground[i], cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # all bounding boxes of a frame
-        frame_bb = np.array(len(contours))
+        frame_bb = np.zeros((len(contours), 4))
 
-        for i, c in enumerate(contours):
+        for k, c in enumerate(contours):
 
             x, y, w, h = cv2.boundingRect(c)
 
             # that s to keep track of each frame's bounding box later we group
             # theme depending on ttracker we gonna use
-            frame_bb[i] = [x, y, w, h]
+            frame_bb[k] = [x, y, w, h]
 
             # je dessine les contours
             cv2.drawContours(video[i], c, -1, (224, 227, 231), 2)
