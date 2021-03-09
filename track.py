@@ -54,7 +54,7 @@ def readVideo(video, ground, stop):
             x, y, w, h = cv2.boundingRect(c)
 
             # that s to keep track of each frame's bounding box later we group
-            # theme depending on ttracker we gonna use
+            # them depending on tracker we gonna use
             frame_bb[k] = [x, y, w, h]
 
             # je dessine les contours
