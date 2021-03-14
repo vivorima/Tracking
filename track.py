@@ -1,10 +1,10 @@
-import numpy as np
-import cv2
 import os
-import random
-from Object import Object
-import math
+
+import cv2
+import numpy as np
 from shapely import geometry
+
+from Object import Object
 
 # PATHS
 images_path = "Dataset/PETS2006/groundtruth/"
@@ -22,7 +22,10 @@ def load_images(path):
             img = cv2.imread(os.path.join(path, filename))
         if img is not None:
             images.append(img)
-    print("Images loaded ...")
+    if path == images_path:
+        print("Images loaded...")
+    else:
+        print("Video Loaded...")
     return np.array(images)
 
 
@@ -37,7 +40,6 @@ def matching(my_objects, video, ground):
         add_object(my_objects, obj)
 
     # for every frame
-    # for i in range(1, 30):
     for i in range(1, len(video)):
         # get the objects in frame i
         frame_objects = extract_objects(ground[i], i)
@@ -80,12 +82,11 @@ def matching(my_objects, video, ground):
                     else:
                         print("--------------------------", obj)
 
-
                 # else:
                 #     print(i,"Not a match", point_1,point_2)
 
-            #         # DISTANCE ENTRE PONTS ---------------------------------------------------------------------> BAD RESULTS
-            #         # search for these coords in my frame_objects using minimal distance---------------------------> OPTIMIZE
+            #         # DISTANCE ENTRE PONTS -------------------------------------------------------------> BAD RESULTS
+            #         # search for these coords in my frame_objects using minimal distance-------------------> OPTIMIZE
             #         # dis = 1000000
             #         # temp = -1
             #         # for o in range(len(frame_objects)):
@@ -140,11 +141,9 @@ def matching(my_objects, video, ground):
 def extract_objects(ground_frame, frame_num):
     # OLD OPENCV VERSION, RANIA JUST DELETE ret
     ret, contours, hierarchy = cv2.findContours(ground_frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
     # this will contain the frames's objects
     objects = []
-
-    # randomize color of all the objects boxs
+    # randomize color of all the objects boxes
     colors = list(np.random.random(size=3) * 256 for i in range(len(contours)))
 
     '''pour chaque contour on va créer un bounding box'''
@@ -185,8 +184,9 @@ def main():
     my_objects = []
     # video to display
     video = load_images(video_path)
-    # # ground truth
+    # ground truth
     images = load_images(images_path)
+    print("Waiting for Matching...")
     matching(my_objects, video, images)
 
     # OLD RESULTS
@@ -198,7 +198,9 @@ def main():
     #     cv2.imshow('video with bbs', video[i])
     #     cv2.waitKey(1)
 
-    print(my_objects)
+    print("Objects Detected:")
+    for detected in my_objects:
+        print(detected)
 
 
 if __name__ == "__main__":

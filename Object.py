@@ -18,9 +18,11 @@ class Object:
         return self.object_id
 
     def appears_frame(self, frame, position):
+        """adding the coords of the object to frame"""
         self.frames[frame] = position
 
     def getFrame(self, frame):
+        """returns coords for frame"""
         return self.frames[frame]
 
     def __str__(self):
@@ -30,6 +32,7 @@ class Object:
         return "Object " + str(self.object_id) + ", appears in frames: " + str(self.frames)
 
     def __eq__(self, other):
+        """2 objects are equal if they have the same ID"""
         if isinstance(other, Object):
             # We can only compare if `other` is a Shape as well
             return self.object_id == other.object_id
