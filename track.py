@@ -45,6 +45,9 @@ def matching(my_objects, video, ground):
         frame_objects = extract_objects(ground[i], i)
 
         # search the objects of frame i-1 (ref_objects) in the new frame i
+        # they either dont exist
+        # we find them
+        # error: mismatch
         for obj in ref_objects:
             # get the x,y of my object in the frame i-1
             coors = obj.getFrame(i - 1)
@@ -59,6 +62,7 @@ def matching(my_objects, video, ground):
             # because these coords are not the best: we will search in frame i objects (extracted with contours)
             # the closest object to these coords: we define un voisinage (kinda like meanshift)
             point_1 = geometry.Point(min_loc)
+            found = False
             for o in range(len(frame_objects)):
                 x = frame_objects[o].getFrame(i)[0]
                 y = frame_objects[o].getFrame(i)[1]
@@ -67,10 +71,10 @@ def matching(my_objects, video, ground):
 
                 # to ensure we are taking the right object: voisinage
                 if point_1.within(circle_buffer):
-                    print(i, ": match", point_1, point_2)
+                    found = True
+                    # print(i, ": match", point_1, point_2 ,"for: ",obj)
                     # then the object in i is the same as the object in i-1
                     # update object position in frame i
-
                     # update coords in the frame i for obj
                     if obj in my_objects:
                         frame_objects[o].set_id(obj.get_id())
@@ -80,54 +84,45 @@ def matching(my_objects, video, ground):
                         # we found a match so we break
                         break
                     else:
-                        print("--------------------------", obj)
+                        # should (and will) never happen but just in case we made a mistake
+                        print(i, " : ERROR updating an object that doesnt exist: ", obj)
 
-                # else:
-                #     print(i,"Not a match", point_1,point_2)
+            # if a mismatch occured for any reason: (merge / occul / descriptor error)
+            if not found:
+                # either they dont exist (they left) or we made a mistake
+                print(i, " : No match found or mismatch for: ", obj)
+                # we suppose it left the frame because we cant really do anything here
 
-            #         # DISTANCE ENTRE PONTS -------------------------------------------------------------> BAD RESULTS
-            #         # search for these coords in my frame_objects using minimal distance-------------------> OPTIMIZE
-            #         # dis = 1000000
-            #         # temp = -1
-            #         # for o in range(len(frame_objects)):
-            #         #     x = frame_objects[o].getFrame(i)[0]
-            #         #     y = frame_objects[o].getFrame(i)[1]
-            #         #     value = math.sqrt((x - min_loc[0])**2 + (y - min_loc[1])** 2)
-            #         #     # print(i, value)
-            #         #     if value < dis:
-            #         #         dis = value
-            #         #         temp = o
 
-            # LOOP:  we do this for all objects in frame i-1
-
-            # if there are still objects in frame i that werent in frame i-1 they either are new or they left the shot
-            for j in frame_objects:
-                if j.get_id() == -1:  # objects not found in i-1
-                    # search for them  in  objects of frames [0:i-2] (my_objects) (maybe they left the shot and came
-                    # back later)
-                    point_1 = geometry.Point(j.getFrame(i))
-                    found = False
-                    v = 0
-                    while v < len(my_objects) and not found:
-                        # voisinage dans la last frame but we really shouldnt use this: want to use un descripteur
-                        x = my_objects[v].get_last_frame()[0]
-                        y = my_objects[v].get_last_frame()[1]
-                        point_2 = geometry.Point(x, y)
-                        circle_buffer = point_2.buffer(10)
-                        # if they exist update my_objects
-                        if point_1.within(circle_buffer):
-                            j.set_id(my_objects[v].get_id())
-                            my_objects[v].appears_frame(i, j.getFrame(i))
-                            # since obj is already in my_objects it will be updated auto
-                            bounding_box(my_objects[v], video[i], i)
-                            found = True
-                        v += 1
-                    # if they dont exist then its a new object
-                    # when we reach the end of our list :3
-                    if not found:
-                        j.set_id(getID(my_objects))
-                        add_object(my_objects, j)
-                        bounding_box(j, video[i], i)
+        # if there are still objects in frame i that werent matched in frame i-1 they either are new or they left the
+        # shot and came back in frame i
+        for j in frame_objects:
+            if j.get_id() == -1:  # objects not found in i-1
+                # search for them  in  objects of frames [0:i-2] (my_objects)
+                # (maybe they left the shot and came back later)
+                point_1 = geometry.Point(j.getFrame(i))
+                found = False
+                v = 0
+                while v < len(my_objects) and not found:
+                    # voisinage dans la last frame -----> this way we dont search in all the frames
+                    x = my_objects[v].get_last_frame()[0]
+                    y = my_objects[v].get_last_frame()[1]
+                    point_2 = geometry.Point(x, y)
+                    circle_buffer = point_2.buffer(10)
+                    # if they exist update my_objects
+                    if point_1.within(circle_buffer):
+                        j.set_id(my_objects[v].get_id())
+                        my_objects[v].appears_frame(i, j.getFrame(i))
+                        # since obj is already in my_objects it will be updated auto
+                        bounding_box(my_objects[v], video[i], i)
+                        found = True
+                    v += 1
+                # if they dont exist then its a new object
+                # when we reach the end of our list :3
+                if not found:
+                    j.set_id(getID(my_objects))
+                    add_object(my_objects, j)
+                    bounding_box(j, video[i], i)
 
         cv2.imshow('video with bbs', video[i])
         cv2.waitKey(1)
