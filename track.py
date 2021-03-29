@@ -31,23 +31,20 @@ def load_images(path):
 
 # detects objects in first frame, search for the same objects in second frame
 def matching(my_objects, video, ground):
-    """reads the video,detects contours and affects a bounding box to every object in a frame"""
-
-    # get the objects in the first frame only
+    # -----------------------------------------------REF FRAME----------------------------------------------------------
+    # get the objects in the first frame only (frame de ref)
     ref_objects = extract_objects(ground[0], 0)
     # since all these objects are new i will affect a new ID to all of them and insert them to my video objects
     for obj in ref_objects:
         add_object(my_objects, obj)
 
-    # for every frame
+    # -------------------------------------FOR EACH FRAME IN THE VIDEO--------------------------------------------------
     for i in range(1, len(video)):
-        # get the objects in frame i
+        # DETECT OBJECTS IN FRAME i
         frame_objects = extract_objects(ground[i], i)
 
-        # search the objects of frame i-1 (ref_objects) in the new frame i
-        # they either dont exist
-        # we find them
-        # error: mismatch
+        # ---------------------------------------------search the objects of frame i-1 (ref_objects) in the new frame i
+        # they either dont exist(left), we find them (match) or  error (mismatch)
         for obj in ref_objects:
             # get the x,y of my object in the frame i-1
             coors = obj.getFrame(i - 1)
@@ -59,8 +56,7 @@ def matching(my_objects, video, ground):
             # get the min location of the object "found" in frame i
             _, _, min_loc, _ = cv2.minMaxLoc(res)
 
-            # because these coords are not the best: we will search in frame i objects (extracted with contours)
-            # the closest object to these coords: we define un voisinage (kinda like meanshift)
+            # SEARCHING FOR THE OBJECT NEAR MIN_LOC  (voisinage)
             point_1 = geometry.Point(min_loc)
             found = False
             for o in range(len(frame_objects)):
@@ -68,14 +64,10 @@ def matching(my_objects, video, ground):
                 y = frame_objects[o].getFrame(i)[1]
                 point_2 = geometry.Point(x, y)
                 circle_buffer = point_2.buffer(30)  # radius of 30
-
-                # to ensure we are taking the right object: voisinage
                 if point_1.within(circle_buffer):
+                    # WE FOUND THE OBJECT IN FRAME I
                     found = True
-                    # print(i, ": match", point_1, point_2 ,"for: ",obj)
-                    # then the object in i is the same as the object in i-1
-                    # update object position in frame i
-                    # update coords in the frame i for obj
+                    # update object position in frame i & coords in the frame i for obj
                     if obj in my_objects:
                         frame_objects[o].set_id(obj.get_id())
                         my_objects[my_objects.index(obj)].appears_frame(i, frame_objects[o].getFrame(i))
@@ -87,29 +79,35 @@ def matching(my_objects, video, ground):
                         # should (and will) never happen but just in case we made a mistake
                         print(i, " : ERROR updating an object that doesnt exist: ", obj)
 
-            # if a mismatch occured for any reason: (merge / occul / descriptor error)
+            # if a mismatch occured for any reason: (merge / occlusion / descriptor error)
             if not found:
                 # either they dont exist (they left) or we made a mistake
+                # we suppose it left the frame because we cant really do anything here?????????????????????????????????
                 print(i, " : No match found or mismatch for: ", obj)
-                # we suppose it left the frame because we cant really do anything here
 
+        # RESULT TILL NOW: SOME OBJETCS IN REF WERE FOUND IN FRAME i, SOME WERENT (not found -> idk what to do about it)
 
-        # if there are still objects in frame i that werent matched in frame i-1 they either are new or they left the
-        # shot and came back in frame i
+        # REF <- FRAME I: so affect id to all objects in FRAME I AS WELL
+
+        # some objects in frame i werent matched in frame i-1 --------->
+        # they either are new or they left the shot (0,i-2) and came back in frame i
         for j in frame_objects:
-            if j.get_id() == -1:  # objects not found in i-1
-                # search for them  in  objects of frames [0:i-2] (my_objects)
-                # (maybe they left the shot and came back later)
+            # search for them  in  objects of frames [0:i-2] ---------> using un voisinage aussi (latest frame)
+
+            if j.get_id() == -1:  # if object was not found in i-1 (id not updated)
+                # Initialisations
                 point_1 = geometry.Point(j.getFrame(i))
                 found = False
                 v = 0
+                # compare x,y with each object in the lastest frame
                 while v < len(my_objects) and not found:
                     # voisinage dans la last frame -----> this way we dont search in all the frames
                     x = my_objects[v].get_last_frame()[0]
                     y = my_objects[v].get_last_frame()[1]
                     point_2 = geometry.Point(x, y)
                     circle_buffer = point_2.buffer(10)
-                    # if they exist update my_objects
+
+                    # if we find a match then we update (could be wrong but whatever: occlusion problem)
                     if point_1.within(circle_buffer):
                         j.set_id(my_objects[v].get_id())
                         my_objects[v].appears_frame(i, j.getFrame(i))
@@ -117,8 +115,8 @@ def matching(my_objects, video, ground):
                         bounding_box(my_objects[v], video[i], i)
                         found = True
                     v += 1
-                # if they dont exist then its a new object
-                # when we reach the end of our list :3
+
+                # if we dont find anything then its a new object
                 if not found:
                     j.set_id(getID(my_objects))
                     add_object(my_objects, j)
@@ -130,7 +128,6 @@ def matching(my_objects, video, ground):
         ref_objects.clear()
         # adding the new ones with the new IDs
         ref_objects.extend(frame_objects)
-        # frame ++
 
 
 def extract_objects(ground_frame, frame_num):
