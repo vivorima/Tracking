@@ -20,6 +20,7 @@ def load_images(path):
                              cv2.IMREAD_GRAYSCALE)
         else:
             img = cv2.imread(os.path.join(path, filename))
+
         if img is not None:
             images.append(img)
 
@@ -31,11 +32,13 @@ def load_images(path):
 
 
 # detects objects in first frame, search for the same objects in second frame
-def matching(video, ground):
+def matching(video, ground, video_speed):
 
     frames = []
 
     ID_OBJ = 1
+
+    seuil_fixe = 15
 
     # for each frame i extract objects
     for image in ground:
@@ -80,7 +83,7 @@ def matching(video, ground):
 
             # s'il y a matching grace au seuil
             # l'objet a le meme id et couleur que l'objet trouvé
-            if(np.min(distances) <= 15):
+            if(np.min(distances) <= seuil_fixe):
 
                 matching_obj = frames[i-1][min_index]
 
@@ -130,12 +133,12 @@ def matching(video, ground):
 
         # print("########################################")
 
-    displayVideo(frames, video)
+    displayVideo(frames, video, video_speed)
 
     return frames
 
 
-def displayVideo(frames, video):
+def displayVideo(frames, video, video_speed):
 
     # pour chaque frame on dessine les objets qu'elle contient
     for i in range(len(frames)):
@@ -153,11 +156,11 @@ def displayVideo(frames, video):
         # si tu le mets a 0 ça va garder le path (give it a try, it s cool)
         drawPath(video, frames, i-100, i+1)
 
-        #cv2.imwrite("BB/image" + str(i)+".jpg", video[i])
+        cv2.imwrite("BB/image" + str(i)+".jpg", video[i])
 
         cv2.imshow('video with bbs', video[i])
 
-        cv2.waitKey(50)
+        cv2.waitKey(video_speed)
 
 
 def drawPath(video, frames, minVal, maxVal):
@@ -174,18 +177,20 @@ def drawPath(video, frames, minVal, maxVal):
 
 def extract_objects(frame):
 
-    # OLD OPENCV VERSION, RANIA JUST DELETE ret
-    contours, hierarchy = cv2.findContours(
+    # returns a list of contours
+    contours, _ = cv2.findContours(
         frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     # this will contain the frames's objects
     objects = []
+    seuilMinimal = 30
 
     '''pour chaque contour on va créer un bounding box'''
     for k, c in enumerate(contours):
 
         x, y, w, h = cv2.boundingRect(c)
-        # pour contourner le probleme des petites windows
-        if (w > 30 and h > 30):
+        # pour contourner le probleme des faux contours
+        if (w > seuilMinimal and h > seuilMinimal):
 
             '''creating my object'''
             objects.append(Object(-1, [x, y, w, h]))
@@ -196,6 +201,8 @@ def extract_objects(frame):
 # Main Function
 def main():
 
+    video_speed = 50
+
     my_objects = []
     # video to display
     video = load_images(video_path)
@@ -203,7 +210,7 @@ def main():
     images = load_images(images_path)
 
     print("Waiting for Matching...")
-    frames = matching(video, images)
+    frames = matching(video, images, video_speed)
 
 
 if __name__ == "__main__":

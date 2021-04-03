@@ -14,6 +14,8 @@ class Object:
         self.centroid = [self.x + (self.w / 2),
                          self.y + (self.h / 2)]
 
+        self.perimeter = (self.w + self.h)*2
+
     def set_id(self, id):
 
         self.object_id = id
@@ -30,6 +32,9 @@ class Object:
 
     def get_x(self):
         return self.x
+
+    def get_perimeter(self):
+        return self.perimeter
 
     def get_y(self):
         return self.y
