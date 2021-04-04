@@ -5,6 +5,7 @@ import numpy as np
 import math
 from Object import Object
 
+
 # PATHS
 images_path = "Dataset/groundtruth/"
 video_path = "Dataset/input/"
@@ -30,6 +31,25 @@ def load_images(path):
         print("Video Loaded...")
     return np.array(images)
 
+# remove unidentified frames
+
+
+def processFrames(frames):
+
+    for i in range(0, len(frames)):
+
+        objs = []
+
+        for obj in frames[i]:
+
+            if (obj.get_id() != -1):
+
+                if(not(obj.get_id() == 1 and obj.get_ratio() > 0.9)):
+
+                    objs.append(obj)
+
+        frames[i] = np.array(objs)
+
 
 # detects objects in first frame, search for the same objects in second frame
 def matching(video, ground, video_speed):
@@ -45,7 +65,7 @@ def matching(video, ground, video_speed):
 
         frames.append(extract_objects(image))
 
-    # i gave ids to 1st frame objects
+    # i gave ids to 1st frame's objects
     for detected_obj in frames[0]:
 
         detected_obj.set_id(ID_OBJ)
@@ -54,12 +74,8 @@ def matching(video, ground, video_speed):
     # pour chaque frame de la video
     for i in range(1, len(frames)):
 
-        #print("FRAME", i)
-
-        # pour chaque frame i
+        # pour chaque objet de la frame i
         for obj1 in frames[i]:
-
-            # print(obj1)
 
             distances = np.zeros(len(frames[i-1]))
 
@@ -68,71 +84,88 @@ def matching(video, ground, video_speed):
 
             for k, obj2 in enumerate(frames[i-1]):
 
-                #print("Objet", obj2.get_id())
-
                 distances[k] = math.dist(
                     obj1.get_centroid(), obj2.get_centroid())
 
-                #print("distance = ", distances[k])
-
             # je reecupere l'indice de la distance minimale ça correspond aussi
             # a l indice de l'objet (probablement recherché) dans la frame i - 1
-            min_index = np.argmin(distances)
+            if(len(distances) > 0):
 
-            #print("Min dist = ", np.min(distances))
+                min_index = np.argmin(distances)
 
-            # s'il y a matching grace au seuil
-            # l'objet a le meme id et couleur que l'objet trouvé
-            if(np.min(distances) <= seuil_fixe):
+                # s'il y a matching grace au seuil
+                # l'objet a le meme id et couleur que l'objet trouvé
+                if(np.min(distances) <= seuil_fixe):
 
-                matching_obj = frames[i-1][min_index]
+                    matching_obj = frames[i-1][min_index]
 
-                obj1.set_id(matching_obj.get_id())
+                    obj1.set_id(matching_obj.get_id())
 
-            else:
-                # si je ne trouve pas le match
-                # je cherche dans les 28 frames precedentes
-                #  ( au max 32 frame psk sinon la distance devient trop grande )
-                found = False
-                seuil = 45
-                for j in range(i-2, i-30, -1):
+                else:
+                    # si je ne trouve pas le match
+                    # je cherche dans les 34 frames precedentes
+                    #  ( au max 34 frames psk sinon la distance devient trop grande )
+                    found = False
 
-                    distances = np.zeros(len(frames[j]))
+                    found_ratio = False
 
-                    for v, obj2 in enumerate(frames[j]):
+                    seuil = 44
 
-                        # print(obj2)
+                    frame_obj = []
 
-                        distances[v] = math.dist(
-                            obj1.get_centroid(), obj2.get_centroid())
+                    for j in range(i-2, i-35, -1):
 
-                        #print("distance = ", distances[v])
+                        if(i-2 > 0):
 
-                    # je reecupere l'indice du min
-                    min_index = np.argmin(distances)
+                            distances = np.zeros(len(frames[j]))
 
-                    #print("Min dist = ", np.min(distances))
+                            for v, obj2 in enumerate(frames[j]):
 
-                    # Si j'arrive a matcher j'arrete de rechercher dans les frames precedentes
-                    if(np.min(distances) <= seuil):
+                                distances[v] = math.dist(
+                                    obj1.get_centroid(), obj2.get_centroid())
 
-                        matching_obj = frames[j][min_index]
+                                # on save l'indice de la frame et l'indice du dernier objet qui a le
+                                # meme ratio que l'objet qu'on recherche
+                                if(abs(obj1.get_ratio() - obj2.get_ratio() == 0)):
 
-                        obj1.set_id(matching_obj.get_id())
+                                    frame_obj = [j, v, distances[v]]
+                                    found_ratio = True
 
-                        found = True
-                        break
+                            if(len(distances) > 0):
 
-                    seuil += 1
+                                # je reecupere l'indice du min
+                                min_index = np.argmin(distances)
 
-                # si je trouve pas de match c est un nouvel objet
-                if(not found):
+                                matching_obj = frames[j][min_index]
 
-                    obj1.set_id(ID_OBJ)
-                    ID_OBJ += 1
+                                # Si j'arrive a matcher j'arrete de rechercher dans les frames precedentes
+                                if(np.min(distances) <= seuil):
 
-        # print("########################################")
+                                    obj1.set_id(matching_obj.get_id())
 
+                                    found = True
+                                    break
+
+                                seuil += 1
+
+                    # si je trouve pas de match
+                    if(not found):
+                        # soit c est l'objet avec un BB du meme ratio (bien sur selon la dist aussi)
+                        if(found_ratio and frame_obj[2] <= 2*seuil):
+
+                            obj1.set_id(frames[frame_obj[0]]
+                                        [frame_obj[1]].get_id())
+
+                        # ou bien c'est un nouvel objet
+                        else:
+                            obj1.set_id(ID_OBJ)
+                            ID_OBJ += 1
+
+    # elimine les BB du cartable qu'on peut pas eliminer au debut
+    # grace au seuillage
+    processFrames(frames)
+
+    # lance la video
     displayVideo(frames, video, video_speed)
 
     return frames
@@ -156,7 +189,7 @@ def displayVideo(frames, video, video_speed):
         # si tu le mets a 0 ça va garder le path (give it a try, it s cool)
         drawPath(video, frames, i-100, i+1)
 
-        cv2.imwrite("BB/image" + str(i)+".jpg", video[i])
+        cv2.imwrite("bounding_boxes/image" + str(i)+".jpg", video[i])
 
         cv2.imshow('video with bbs', video[i])
 
@@ -173,6 +206,16 @@ def drawPath(video, frames, minVal, maxVal):
 
                 cv2.circle(video[maxVal-1], (int(detected2.get_centroid()[0]), int(detected2.get_centroid()[
                     1])), 2, detected2.get_color())
+
+
+def splitObject(obj):
+
+    obj1 = Object(obj.get_id(), [obj.get_x(), obj.get_y(), int(
+        obj.get_w()/2), obj.get_h()])
+
+    obj2 = Object(obj.get_id(), [obj.get_x()+int(obj.get_w()/2),
+                                 obj.get_y(), int(obj.get_w()/2), obj.get_h()])
+    return obj1, obj2
 
 
 def extract_objects(frame):
@@ -192,8 +235,21 @@ def extract_objects(frame):
         # pour contourner le probleme des faux contours
         if (w > seuilMinimal and h > seuilMinimal):
 
-            '''creating my object'''
-            objects.append(Object(-1, [x, y, w, h]))
+            obj = Object(-1, [x, y, w, h])
+
+            # pour diviser les trop grands BB en 2 objets
+            if(w > 98 and (160 < h < 174 or h > 175)):
+
+                obj1, obj2 = splitObject(obj)
+                objects.append(obj1)
+                objects.append(obj2)
+
+            else:
+
+                # pour eliminer la plupart des BB du cartable
+                if(obj.get_ratio() != 1.04 and obj.get_ratio() != 1.02):
+                    '''creating my object'''
+                    objects.append(obj)
 
     return objects
 
@@ -201,7 +257,7 @@ def extract_objects(frame):
 # Main Function
 def main():
 
-    video_speed = 50
+    video_speed = 20
 
     my_objects = []
     # video to display
@@ -211,6 +267,9 @@ def main():
 
     print("Waiting for Matching...")
     frames = matching(video, images, video_speed)
+
+    for i in range(len(frames)):
+        print("frame ", i, "\n", frames[i])
 
 
 if __name__ == "__main__":
