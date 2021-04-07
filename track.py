@@ -238,7 +238,7 @@ def extract_objects(frame):
             obj = Object(-1, [x, y, w, h])
 
             # pour diviser les trop grands BB en 2 objets
-            if(w > 98 and (160 < h < 174 or h > 175)):
+            if(w > 100 and (160 < h < 174 or h > 175)):
 
                 obj1, obj2 = splitObject(obj)
                 objects.append(obj1)
@@ -257,7 +257,7 @@ def extract_objects(frame):
 # Main Function
 def main():
 
-    video_speed = 20
+    video_speed = 50
 
     my_objects = []
     # video to display
