@@ -53,10 +53,3 @@ class Object:
 
     def __repr__(self):
         return "Object " + str(self.object_id) + "x = " + str(self.x) + "y = " + str(self.y) + "w = " + str(self.w) + "h = " + str(self.h) + " ratio " + str(self.ratio)
-
-    def __eq__(self, other):
-        """2 objects are equal if they have the same ID"""
-        if isinstance(other, Object):
-            # We can only compare if `other` is a Shape as well
-            return self.object_id == other.object_id
-        return NotImplemented

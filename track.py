@@ -31,9 +31,8 @@ def load_images(path):
         print("Video Loaded...")
     return np.array(images)
 
-# remove unidentified frames
 
-
+# remove unidentified frames (celles du cartable)
 def processFrames(frames):
 
     for i in range(0, len(frames)):
@@ -51,7 +50,7 @@ def processFrames(frames):
         frames[i] = np.array(objs)
 
 
-# detects objects in first frame, search for the same objects in second frame
+# matching algorithm
 def matching(video, ground, video_speed):
 
     frames = []
@@ -79,7 +78,7 @@ def matching(video, ground, video_speed):
 
             distances = np.zeros(len(frames[i-1]))
 
-            # je calcule la distance entre les centroid des objets de ma frame actuelle "i"
+            # je calcule la distance entre les centroides des objets de ma frame actuelle "i"
             # avec ceux des objets de la frame precedente "i-1"
 
             for k, obj2 in enumerate(frames[i-1]):
@@ -103,7 +102,7 @@ def matching(video, ground, video_speed):
 
                 else:
                     # si je ne trouve pas le match
-                    # je cherche dans les 34 frames precedentes
+                    # je cherche dans les 33 frames precedentes
                     #  ( au max 34 frames psk sinon la distance devient trop grande )
                     found = False
 
@@ -186,7 +185,7 @@ def displayVideo(frames, video, video_speed):
 
         # alors ça c est pour draw la trajectoire
         # il commence a dessiner a partir de la frame i-100 ( pour clean le chemin avec le temps)
-        # si tu le mets a 0 ça va garder le path (give it a try, it s cool)
+        # si on le mets a 0 ça va garder le path en entier et encombrer la vidéo
         drawPath(video, frames, i-100, i+1)
 
         cv2.imwrite("bounding_boxes/image" + str(i)+".jpg", video[i])
@@ -201,7 +200,7 @@ def drawPath(video, frames, minVal, maxVal):
     for k in range(minVal, maxVal):
 
         if(k > 0):
-            # pour chaque objet d'une frame on dessine le centroid
+            # pour chaque objet d'une frame on dessine le centroide
             for detected2 in frames[k]:
 
                 cv2.circle(video[maxVal-1], (int(detected2.get_centroid()[0]), int(detected2.get_centroid()[
@@ -257,7 +256,7 @@ def extract_objects(frame):
 # Main Function
 def main():
 
-    video_speed = 50
+    video_speed = 20
 
     my_objects = []
     # video to display
