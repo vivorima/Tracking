@@ -7,8 +7,8 @@ from Object import Object
 
 
 # PATHS
-images_path = "Dataset/groundtruth/"
-video_path = "Dataset/input/"
+images_path = "Dataset/PETS2006/groundtruth/"
+video_path = "Dataset/PETS2006/input/"
 
 
 def load_images(path):
@@ -83,8 +83,7 @@ def matching(video, ground, video_speed):
 
             for k, obj2 in enumerate(frames[i-1]):
 
-                distances[k] = math.dist(
-                    obj1.get_centroid(), obj2.get_centroid())
+                distances[k] = math.sqrt(sum((px - qx) ** 2.0 for px, qx in zip(obj1.get_centroid(), obj2.get_centroid())))
 
             # je reecupere l'indice de la distance minimale ça correspond aussi
             # a l indice de l'objet (probablement recherché) dans la frame i - 1
@@ -120,8 +119,8 @@ def matching(video, ground, video_speed):
 
                             for v, obj2 in enumerate(frames[j]):
 
-                                distances[v] = math.dist(
-                                    obj1.get_centroid(), obj2.get_centroid())
+                                distances[v] = math.sqrt(
+                                    sum((px - qx) ** 2.0 for px, qx in zip(obj1.get_centroid(), obj2.get_centroid())))
 
                                 # on save l'indice de la frame et l'indice du dernier objet qui a le
                                 # meme ratio que l'objet qu'on recherche
@@ -220,7 +219,7 @@ def splitObject(obj):
 def extract_objects(frame):
 
     # returns a list of contours
-    contours, _ = cv2.findContours(
+    ret, contours, _ = cv2.findContours(
         frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     # this will contain the frames's objects
@@ -252,6 +251,14 @@ def extract_objects(frame):
 
     return objects
 
+def CreateVideoFromImages(array_images):
+    video = cv2.VideoWriter('final_video.avi', cv2.VideoWriter_fourcc(*'DIVX'), 15,
+                            (array_images[0].shape[1], array_images[0].shape[0]))
+    for i in range(len(array_images)):
+        video.write(array_images[i])
+    video.release()
+    print("video created..")
+    return video
 
 # Main Function
 def main():
@@ -269,6 +276,8 @@ def main():
 
     for i in range(len(frames)):
         print("frame ", i, "\n", frames[i])
+
+    CreateVideoFromImages(video)
 
 
 if __name__ == "__main__":
